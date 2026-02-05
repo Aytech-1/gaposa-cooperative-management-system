@@ -1,232 +1,178 @@
-# Authentication And User Management System
+# GAPOSA Cooperative Management System 🚀
 
-![Laravel](https://img.shields.io/badge/Laravel-12-red)
+![CI](https://img.shields.io/badge/CI-Ready-success)
 ![PHP](https://img.shields.io/badge/PHP-8.4-blue)
-![Redis](https://img.shields.io/badge/Redis-Enabled-critical)
-![License](https://img.shields.io/badge/License-MIT-green)
-![Status](https://img.shields.io/badge/Status-Production%20Ready-success)
+![Laravel](https://img.shields.io/badge/Laravel-12-red)
+![Status](https://img.shields.io/badge/Status-Active%20Development-success)
 
+The **GAPOSA Cooperative Management System** is a **policy-driven, API-first financial management platform** developed for the **Gateway Polytechnic Saapade Cooperative Society (GAPOSA)**.
 
+The system automates cooperative operations including **member management, savings and contributions, loan processing, interest computation, salary-based repayments, guarantor enforcement, and financial reporting**, with strong emphasis on **transparency, accountability, and auditability**.
 
-A **production-ready Laravel 12 authentication and user management system** built using modern backend engineering best practices.  
-This project focuses on **security, scalability, performance optimization, clean architecture, and maintainability**.
-
-It is suitable for **enterprise systems, SaaS platforms, APIs, and real-world production deployments**.
+This is a **production-oriented system**, designed with enterprise standards and not a demo or toy academic project.
 
 ---
 
-## 🚀 Core Features
+## 📑 Table of Contents
 
-- User & staff authentication
-- Secure login and logout
-- Password reset via email (ResetPasswordNotification)
-- Role-based access control (RBAC)
-- Permission management
-- Middleware-driven authorization
-- Activity logging (audit trail)
-- Redis caching for performance
-- Background job processing (Queues)
-- Laravel Telescope monitoring
-- Global API response handling
-- API key protection
-- N+1 query prevention using eager loading
-
----
-
-## 🛠️ Technology Stack
-
-| Component | Technology |
-|--------|-----------|
-| Framework | Laravel 12 |
-| Language | PHP 8.4.8 |
-| Database | MySQL |
-| Cache | Redis |
-| Queues | Database / Redis |
-| Auth | Laravel Auth + Sanctum |
-| Authorization | Spatie Roles & Permissions |
-| Monitoring | Laravel Telescope |
-| Version Control | Git & GitHub |
+- [Product Vision](#-product-vision)
+- [System Architecture](#-system-architecture)
+- [Technology Stack](#-technology-stack)
+- [Core System Features](#-core-system-features)
+- [Loan & Repayment Model](#-loan--repayment-model)
+- [API Documentation](#-api-documentation)
+- [API Testing (Postman)](#-api-testing-postman)
+- [API Documentation (Swagger / OpenAPI)](#-api-documentation-swagger--openapi)
+- [Security & Compliance](#-security--compliance)
+- [Local Development Setup](#-local-development-setup)
+- [Versioning & Release Notes](#-versioning--release-notes)
+- [Development Workflow](#-development-workflow)
+- [License](#-license)
+- [Institution](#-institution)
 
 ---
 
-## ⚡ Performance & Optimization
+## 🧠 Product Vision
 
-This project is optimized using:
+Many cooperative societies still rely on **manual records, spreadsheets, and fragmented processes**, leading to errors, delays, weak accountability, and difficulty in tracking loans, repayments, and guarantor obligations.
 
-- **Eager loading** to eliminate N+1 query problems
-- **Redis caching** for frequently accessed data
-- Cached roles & permissions
-- Queue-based background processing
-- Optimized middleware execution
-- Clean service-layer architecture
+The GAPOSA Cooperative Management System addresses these challenges by providing a **centralized, secure, and automated platform** that enforces cooperative policies while giving administrators and members **real-time visibility** into financial activities.
 
 ---
 
-## 🔐 Security Implementation
+## 🏗️ System Architecture
 
-- Secure password hashing
-- Role & permission-based route protection
-- Middleware enforcement
-- API key validation
-- Activity logging for auditing
-- Environment-based configuration protection
-- No secrets committed to GitHub
+- API-First Architecture
+- Single-Tenant Cooperative Design
+- Policy-Driven Business Logic
+- Stateless RESTful APIs
+- Modular Laravel Architecture
+- Role-Based Access Control (RBAC)
 
----
-
-## 🧠 System Architecture Overview
-
-### Authentication Flow
-Client → API → Middleware → Controller → Service → Model → Database
-
-### Authorization Flow
-Request → Role Middleware → Permission Check → Controller Access
-
-### Background Processing
-User Action → Job Dispatch → Queue Worker → Notification / Log
-
-
-### Caching Strategy
-Request → Cache → Database (if cache miss) → Cache Store
-
+The system is deployed for **one cooperative society (GAPOSA)**, with clearly separated **Admin** and **Member** access layers.
 
 ---
 
-## 📡 API Documentation (Sample)
+## 🧰 Technology Stack
 
-### Authentication
-| Method | Endpoint | Description |
-|------|--------|-------------|
-| POST | /api/v1/user/login | User login |
-| POST | /api/v1/user/register | User registration |
-| POST | /api/v1/user/logout | Logout |
-| POST | /api/v1/password/reset | Reset password |
+### Backend
+- **Laravel 12**
+- **PHP 8.4**
+- **MySQL**
+- **Redis** (optional for cache and queues)
 
-### Admin & Staff
-| Method | Endpoint | Description |
-|------|--------|-------------|
-| POST | /api/v1/admin/login | Admin login |
-| GET | /api/v1/admin/users | Manage users |
-| POST | /api/v1/admin/roles | Manage roles |
-| POST | /api/v1/admin/permissions | Manage permissions |
+### Frontend (Clients)
+- RESTful API Consumers
+- Web-based Admin and Member Portals
 
-> 📌 Full API testing can be done using **Postman**.
+### Tooling & Infrastructure
+- Git & GitHub
+- Laravel Queues & Jobs
+- Laravel Scheduler
+- Laravel Logging & Auditing
 
 ---
 
-## 📂 Project Structure Highlights
+## ✨ Core System Features
 
-app/
-├── Http/
-│ ├── Controllers/
-│ ├── Middleware/
-│ ├── Resources/
-├── Jobs/
-├── Models/
-├── Services/
-├── Notifications/
-├── Providers/
-routes/
-database/
-config/
+### 👥 Member Management
+- Member registration (Academic & Non-Academic)
+- Status management (Active, Suspended, Retired, Resigned, Dismissed)
+- Profile and employment record tracking
 
+### 💰 Savings & Contribution Management
+- Compulsory savings enforcement
+- Voluntary contribution support
+- Contribution history tracking
+- Refund handling on exit
+- Target savings (Ileya, Christmas, custom goals)
 
-- **Services** → Business logic
-- **Jobs** → Background processing
-- **Middleware** → Security & authorization
-- **Resources** → API response formatting
+### 🏦 Loan Management
+- Loan eligibility validation
+- Savings-based loan limits (e.g. 10× savings)
+- Configurable loan duration
+- Flat interest calculation
+- Loan approval workflows
+- Automated repayment schedules
+
+### 🔄 Loan Repayment & Deduction
+- Salary-based repayment tracking
+- Monthly repayment posting
+- Missed repayment detection
+- Loan completion and closure
+- Default escalation handling
+
+### 🤝 Guarantor Management
+- Guarantor assignment per loan
+- Exposure tracking
+- Automatic guarantor activation on default
+
+### 📊 Reports & Transparency
+- Member financial statements
+- Loan performance reports
+- Monthly financial summaries
+- Defaulters and risk reports
+- Exportable reports (PDF / Excel)
+
+### 🧾 Audit & Accountability
+- User activity logs
+- Financial audit trails
+- Policy change tracking
+- Read-only auditor access
 
 ---
 
-## ⚙️ Installation & Setup
+## 💳 Loan & Repayment Model
 
-### 1️⃣ Clone Repository
+- **Loan Eligibility**
+  - Minimum contribution period (e.g. 6 months)
+  - Active membership status
+  - No existing active loan
+
+- **Interest Model**
+  - Flat interest rate (e.g. 10%)
+  - Calculated at loan approval
+  - Spread evenly across repayment duration
+
+- **Repayment Flow**
+  - Salary deduction
+  - Wallet debit
+  - Loan balance reduction
+  - Automatic loan closure on full repayment
+
+---
+
+## 📡 API Documentation
+
+The GAPOSA Cooperative Management System exposes a **RESTful API** that powers both the **Admin Portal** and **Member Portal**.
+
+### API Design Principles
+- Stateless requests
+- JSON request and response payloads
+- Secure token-based authentication
+- Role-based authorization for all protected routes
+
+### API Base URL (Local)
+```text
+http://localhost/api
+
+## 📦 Local Development Setup
+
 ```bash
-git clone https://github.com/Aytech-1/Authentication-And-User-Management-System.git
-cd Authentication-And-User-Management-System
-2️⃣ Install Dependencies
-
+git clone https://github.com/YOUR_USERNAME/gaposa-cooperative-management-system.git
+cd gaposa-cooperative-management-system
 composer install
-3️⃣ Environment Setup
-
 cp .env.example .env
 php artisan key:generate
-Configure:
-
-Database
-
-Redis
-
-Mail credentials
-
-4️⃣ Run Migrations & Seeders
-
-php artisan migrate --seed
-5️⃣ Run Application
-
+php artisan migrate
 php artisan serve
-🔄 Queue Worker (Production)
-
-php artisan queue:work
-For production, use Supervisor.
-
-🔍 Monitoring & Debugging
-Laravel Telescope enabled
-
-Activity logs stored in database
-
-Queue & cache monitoring available
-
-🚀 Production Deployment Notes
-Use Redis for cache & queues
-
-Disable Telescope in production
-
-Configure Supervisor for queue workers
-
-Use HTTPS
-
-Set proper file permissions
-
-Use .env securely (never commit)
-
-🏷️ GitHub Topics (Add These)
-
-laravel
-laravel12
-php
-authentication
-authorization
-rbac
-redis
-api
-backend
-saas
-
-👨‍💻 Author
-ADEYEMI AYOBAMI SAMSON
-Founder & CEO — Nexovaste Technologies
-Full-Stack Software Developer
-
-📍 Nigeria
-📧 adeyemiayobami273@gmail.com
-
-🔗 GitHub: https://github.com/Aytech-1
-
-🔗 LinkedIn: https://www.linkedin.com/in/samsonadeyemi-dev
 
 📄 License
-This project is licensed under the MIT License.
 
+This system is developed for GAPOSA Cooperative Society.
+Licensing and redistribution are subject to institutional approval.
 
+🏢 Institution
 
-
-⭐ Support & Contribution
-    If you find this project useful:
-    
-    ⭐ Star the repository
-    
-    🍴 Fork it
-    
-    🧑‍💻 Submit pull requests
-
+Gateway ICT Polytechnic Saapade
+Cooperative Management System (GAPOSA)
