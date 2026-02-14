@@ -38,11 +38,6 @@ class UserResource extends JsonResource
                 'statusId' => $this->status_id ?? null,
                 'statusName' => $this->status->status_name ?? null,
             ],
-            'role' => [
-                'roleName' => $this->roles->pluck('name') ?? null,
-                'roleId' => $this->roles->pluck('id') ?? null,
-                'permissions' => $this->getAllPermissions()->pluck('name') ?? null,
-            ],
             'location' => [
                 'lgaId' => $this->lga_id ?? null,
                 'lgaName' => $this->lga->lga_name ?? null,
@@ -52,7 +47,7 @@ class UserResource extends JsonResource
                 'countryName' => $this->lga->state->country->country_name ?? null,
             ],
             'passport' => [
-                'passportUrl' => $this->passport ? Storage::url("passports/staffPictures/{$this->passport}") : null
+                'passportUrl' => $this->passport ? Storage::url("passports/userPictures/{$this->passport}") : null
             ],
         ];
     }
