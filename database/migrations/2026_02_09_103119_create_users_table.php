@@ -28,7 +28,7 @@ return new class extends Migration
             $table->string('passport')->default('default.png')->nullable();
             $table->unsignedBigInteger('status_id')->default(1);
             $table->string('password');
-            $table->date('date_joined');
+            $table->date('date_joined')->nullable();
             $table->date('date_exited')->nullable();
             $table->string('created_by')->nullable();
             $table->string('updated_by')->nullable();
