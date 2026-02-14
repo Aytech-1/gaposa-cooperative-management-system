@@ -4,16 +4,42 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Setup\SetupStatus;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+
 
 class SetupStatusSeeder extends Seeder
 {
-    // Run the database seeds.
     public function run(): void
     {
-        $statuses = ['ACTIVE', 'INACTIVE', 'PENDING', 'APPROVED', 'DECLINED', 'SUSPENDED', 'DELETED', 'COMPLETED', 'CANCELLED', 'FAILED'];
+        $statuses = [
+            'ACTIVE',
+            'INACTIVE',
+            'SUSPENDED',
+            'DELETED',
+            'PENDING',
+            'APPROVED',
+            'DECLINED',
+            'REJECTED',
+            'CANCELLED',
+            'PROCESSING',
+            'COMPLETED',
+            'FAILED',
+            'REVERSED',
+            'DISBURSED',
+            'ONGOING',
+            'OVERDUE',
+            'CLOSED',
+            'DEFAULTED',
+            'LOCKED',
+            'UNLOCKED',
+            'PAID',
+            'UNPAID',
+        ];
+
         foreach ($statuses as $status) {
-            SetupStatus::firstOrCreate(['status_name' => $status]);
+            SetupStatus::firstOrCreate([
+                'status_name' => $status,
+            ]);
         }
     }
 }
+

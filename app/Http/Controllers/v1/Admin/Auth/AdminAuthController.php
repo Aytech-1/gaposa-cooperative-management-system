@@ -3,205 +3,170 @@
 namespace App\Http\Controllers\v1\Admin\Auth;
 
 use Carbon\Carbon;
+use App\Services\Config;
 use App\Models\Admin\Staff;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
-use App\Models\Setup\UserDevice;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Password;
+use App\Notifications\Admin\LoginOtpMail;
 use App\Http\Resources\Admin\AdminResource;
+use App\Notifications\Admin\PasswordChangeOtp;
+use App\Notifications\Admin\ResetPasswordMail;
+use App\Notifications\Admin\AccountLockedResetPassword;
+use Illuminate\Validation\Rules\Password as PasswordRule;
+
 
 class AdminAuthController extends Controller
 {
-    public function sendPasswordResetLink(Request $request)
-    {
-
-        $request->validate([
-            'emailAddress' => 'required|string|email'
-        ]);
-
-        $staff = Staff::where('email', $request->emailAddress)->first();
-
-        if (!$staff) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No staff account found with this email address.'
-            ], 404);
-        }
-
-        if ($staff->status_id !== 1) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Your account is not active. Please contact support.'
-            ], 403);
-        }
-
-        $status = Password::broker('admins')->sendResetLink([
-            'email' => $staff->email,
-        ]);
-
-        if ($status === Password::RESET_LINK_SENT) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Password reset link sent to your email address.',
-            ], 200);
-        } else {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unable to send password reset link. Please try again later.'
-            ], 500);
-        }
-    }
-
-    public function resendPasswordResetLink(Request $request)
-    {
-        $request->validate([
-            'emailAddress' => 'required|string|email'
-        ]);
-
-        $staff = Staff::where('email', $request->emailAddress)->first();
-
-        if (!$staff) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No staff account found with this email address.'
-            ], 404);
-        }
-
-        if ($staff->status_id !== 1) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Your account is not active. Please contact support.'
-            ], 403);
-        }
-
-        $status = Password::broker('admins')->sendResetLink([
-            'email' => $staff->email,
-        ]);
-
-        if ($status === Password::RESET_LINK_SENT) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Password reset link resent to your email address.',
-            ], 200);
-        } else {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unable to resend password reset link. Please try again later.'
-            ], 500);
-        }
-    }
-
-    public function finishResetPassword(Request $request)
-    {
-        $request->validate([
-            'token' => 'required|string',
-            'emailAddress' => 'required|string|email|exists:staff,email',
-            'password' => 'required|string|min:8|confirmed',
-        ]);
-
-        $status = Password::broker('admins')->reset(
-            [
-                'email' => $request->emailAddress,
-                'password' => $request->password,
-                'password_confirmation' => $request->password_confirmation,
-                'token' => $request->token,
-            ],
-            function ($user, $password) {
-                $user->password = bcrypt($password);
-                $user->save();
-                $user->tokens()->delete();
-                userDevice ::where('user_id', $user->staff_id)->delete();          }
-        );
-
-        if ($status === Password::PASSWORD_RESET) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Password has been reset successfully.'
-            ], 200);
-        } else {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to reset password. Please try again.'
-            ], 500);
-        }
-    }
-
     public function login(Request $request)
     {
         $request->validate([
             'emailAddress' => 'required|string|email',
-            'password' => 'required|string',
+            'password' => 'required|string|min:6',
         ]);
 
-        $user = Staff::where('email', $request->emailAddress)->first();
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid email address or password.'
-            ], 401);
-        }
+        try {
+            $details = Config::requestDetails();
+            $staff = Staff::where('email', $request->emailAddress)->first();
 
-        if ($user->status_id !== 1) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Your account is not active. Please contact support.'
-            ], 403);
-        }
+            if (!$staff) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid email address or password.'
+                ], 401);
+            }
 
-        $deviceId = $request->header('X-Device-ID');
+            $passwordIsValid = Hash::check($request->password, $staff->password);
+            if ($staff->status_id === 17) {
 
-        if (!$deviceId) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Device ID is required.'
-            ], 403);
-        }
+                if ($passwordIsValid) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Account locked. Kindly reset your password to unlock your account.'
+                    ], 403);
+                }
 
-        $device = UserDevice::where('user_id', $user->staff_id)
-            ->where('device_id', $deviceId)
-            ->whereNotNull('verified_at')
-            ->first();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid email address or password.'
+                ], 401);
+            }
 
-        if ($device) {
-            $user->last_login_at = now();
-            $user->save();
-            $user->tokens()->delete();
-            $tokenResult = $user->createToken('admin');
-            $tokenResult->accessToken->device_id = $deviceId;
-            $tokenResult->accessToken->save();
-            $token = $tokenResult->plainTextToken;
+            if ($staff->status_id !== 1) {
+
+                if ($passwordIsValid) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Your account is suspended. Please contact support.'
+                    ], 403);
+                }
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid email address or password.'
+                ], 401);
+            }
+            $titleName = Config::getTitleNameById($staff->title_id);
+
+            if (!$passwordIsValid) {
+
+                $staff->increment('login_attempt');
+
+                if ($staff->login_attempt >= 5) {
+
+                    $staff->update([
+                        'status_id' => 17,
+                        'login_attempt' => 0,
+                    ]);
+
+                    $token = Password::createToken($staff);
+
+
+                    $staff->notify(new AccountLockedResetPassword(
+                        Str::title($staff->first_name . ' ' . $staff->last_name),
+                        $token,
+                        $details['device'],
+                        $details['browser'],
+                        $details['location'],
+                        Str::title($titleName)
+                    ));
+
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Account locked. A password reset link has been sent to your email.'
+                    ], 403);
+                }
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid email address or password.'
+                ], 401);
+            }
+
+            $deviceId = $request->header('X-Device-ID');
+            $fullName = $staff->first_name . ' ' . $staff->last_name;
+
+            $device = DB::table('user_devices')
+                ->where('user_id', $staff->staff_id)
+                ->where('device_id', $deviceId)
+                ->whereNotNull('verified_at')
+                ->first();
+
+            if ($device) {
+                $staff->tokens()->delete();
+                $tokenResult = $staff->createToken('auth_token');
+                $tokenResult->accessToken->device_id = $deviceId;
+                $token = $tokenResult->plainTextToken;
+                $tokenResult->accessToken->save();
+
+                $staff->update([
+                    'login_attempt' => 0,
+                    'last_login_at' => now(),
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Login successful.',
+                    'accessToken' => $token
+                ], 200);
+            }
+
+            $otp = rand(100000, 999999);
+
+            DB::table('otps')->updateOrInsert(
+                ['user_id' => $staff->staff_id],
+                [
+                    'otp_code' => Hash::make($otp),
+                    'expires_at' => Carbon::now()->addMinutes(10),
+                    'created_at' => now(),
+                ]
+            );
+
+            $staff->notify(new LoginOtpMail(
+                $otp,
+                $details['device'],
+                $details['location'],
+                Str::title($fullName),
+                Str::title($titleName)
+            ));
 
             return response()->json([
                 'success' => true,
-                'message' => 'Login successful.',
-                'otpRequired' => false,
-                'accessToken' => $token,
-                'tokenType' => 'Bearer'
+                'message' => 'OTP sent to your registered email address. Please verify to complete login.',
             ], 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Something went wrong. Please try again later.',
+                'logError' => $e->getMessage(),
+            ], 500);
         }
-
-        $otp = rand(100000, 999999);
-        DB::table('otps')->updateOrInsert(
-            ['user_id' => $user->staff_id,],
-            [
-                'otp_code' => Hash::make($otp),
-                'expires_at' => Carbon::now()->addMinutes(10),
-                'created_at' => now(),
-            ]
-        );
-
-        return response()->json([
-            'success' => true,
-            'message' => 'OTP sent to your registered email address. Please verify to complete login.',
-            'otpRequired' => true,
-            'otp' => $otp
-        ], 200);
     }
-
 
     public function verifyOtp(Request $request)
     {
@@ -210,130 +175,332 @@ class AdminAuthController extends Controller
             'otpCode' => 'required|string|digits:6',
         ]);
 
-        $deviceId = $request->header('X-Device-ID');
+        try {
+            $deviceId = $request->header('X-Device-ID');
 
-        if (!$deviceId) {
+            if (!$deviceId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Device ID is required.'
+                ], 403);
+            }
+
+            $staff = Staff::where('email', $request->emailAddress)->first();
+
+            if (!$staff) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid email address.'
+                ], 401);
+            }
+
+            $staffId = $staff->staff_id;
+
+            $otpRecord = DB::table('otps')
+                ->where('user_id', $staffId)
+                ->first();
+
+            if (!$otpRecord) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid or expired OTP.'
+                ], 401);
+            }
+
+            if (Carbon::now()->gt($otpRecord->expires_at)) {
+                DB::table('otps')->where('user_id', $staffId)->delete();
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'OTP has expired.'
+                ], 401);
+            }
+
+            if (!Hash::check((string) $request->otpCode, $otpRecord->otp_code)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid OTP code.'
+                ], 401);
+            }
+
+            DB::table('user_devices')->updateOrInsert(
+                ['user_id' => $staffId],
+                [
+                    'device_id'   => $deviceId,
+                    'device_type' => Config::requestDetails()['device'] ?? 'Unknown',
+                    'verified_at' => now(),
+                    'updated_at'  => now(),
+                ]
+            );
+
+            DB::table('otps')->where('user_id', $staffId)->delete();
+
+            $staff->tokens()->delete();
+            $tokenResult = $staff->createToken('auth_token');
+            $tokenResult->accessToken->device_id = $deviceId;
+            $tokenResult->accessToken->save();
+            $token = $tokenResult->plainTextToken;
+            $staff->login_attempt = 0;
+            $staff->last_login_at = now();
+            $staff->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'OTP verified. Login successful.',
+                'accessToken' => $token,
+            ], 200);
+        } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Device ID is required.'
-            ], 403);
+                'message' => 'Something went wrong Please try again later.',
+                'logError' => $e->getMessage(),
+            ], 500);
         }
+    }
 
-        $user = Staff::where('email', $request->emailAddress)->first();
+    public function resetPassword(Request $request, bool $resendLink = false)
+    {
 
-        if (!$user) {
+        $request->validate([
+            'emailAddress' => 'required|string|email',
+        ]);
+        try {
+            $email = $request->emailAddress;
+            $staff = Staff::where('email', $email)->first();
+
+            if ($staff && $staff->status_id !== 1 && $staff->status_id !== 17) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your account is suspended. Please contact support.'
+                ], 403);
+            }
+            $fullName = $staff ? $staff->first_name . ' ' . $staff->last_name : null;
+            $titleName = Config::getTitleNameById($staff->title_id);
+
+            if ($staff) {
+                $token = Password::createToken($staff);
+                $staff->notify(new ResetPasswordMail($token, Str::title($fullName), Str::title($titleName)));
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $resendLink
+                    ? 'Password reset link resent. If this email exists, you will receive it shortly.'
+                    : 'If an account with this email exists, you will receive a password reset link.',
+            ], 200);
+        } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid email address.'
-            ], 401);
+                'message' => 'Something went wrong Please try again later.',
+                'logError' => $e->getMessage()
+            ], 500);
         }
+    }
 
-        $userId = $user->staff_id;
+    public function resendPasswordResetLink(Request $request)
+    {
+        return $this->resetPassword($request, true);
+    }
 
-        $otpRecord = DB::table('otps')
-            ->where('user_id', $userId)
-            ->first();
-
-        if (!$otpRecord) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid or expired OTP.'
-            ], 401);
-        }
-
-        if (Carbon::now()->gt($otpRecord->expires_at)) {
-            DB::table('otps')->where('user_id', $userId)->delete();
-
-            return response()->json([
-                'success' => false,
-                'message' => 'OTP has expired.'
-            ], 401);
-        }
-
-        if (!Hash::check((string) $request->otpCode, $otpRecord->otp_code)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid OTP code.'
-            ], 401);
-        }
-
-        UserDevice::updateOrCreate(
-            [
-                'user_id' => $userId,
-                'device_id' => $deviceId,
+    public function finishResetPassword(Request $request)
+    {
+        $request->validate([
+            'token' => 'required|string',
+            'emailAddress' => 'required|string|email|exists:staff,email',
+            'password' => [
+                'required',
+                'confirmed',
+                PasswordRule::min(8)->mixedCase()->numbers()->symbols()
             ],
-            [
-                'verified_at' => now(),
-            ]
-        );
+        ]);
+        try {
 
-        DB::table('otps')->where('user_id', $userId)->delete();
+            $staff = Staff::where('email', $request->emailAddress)->firstOrFail();
 
-        $user->last_login_at = now();
-        $user->save();
+            if (Hash::check($request->password, $staff->password)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'New password cannot be the same as the old password.'
+                ], 400);
+            }
+            $status = Password::broker('admins')->reset(
+                [
+                    'email' => $request->emailAddress,
+                    'password' => $request->password,
+                    'password_confirmation' => $request->password_confirmation,
+                    'token' => $request->token,
+                ],
 
-        $user->tokens()->delete();
-        $tokenResult = $user->createToken('central_staff_token');
-        $tokenResult->accessToken->device_id = $deviceId;
-        $tokenResult->accessToken->save();
-        $token = $tokenResult->plainTextToken;
+                function ($staff, $password) {
+                    $this->updateStaffPassword($staff, $password);
+                    $staff->status_id = 1;
+                    $staff->save();
+                }
+            );
 
+            if ($status === Password::PASSWORD_RESET) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Password has been reset successfully.'
+                ], 200);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to reset password. Please try again.'
+                ], 500);
+            }
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Something went wrong Please try again later.',
+                'logError' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function updateStaffPassword($staff, $newPassword)
+    {
+        $staff->password = $newPassword;
+        $staff->save();
+        $staff->tokens()->delete();
+        DB::table('user_devices')->where('user_id', $staff->staff_id)->delete();
+    }
+
+    public function fetchProfile()
+    {
+        $staff = Auth::guard('admin')->user();
+        $staffData = Cache::remember("staff_profile_{$staff->staff_id}", now()->addmonth(), function () use ($staff) {
+            return new AdminResource(
+                Staff::with([
+                    'title:title_id,title_name',
+                    'gender:gender_id,gender_name',
+                    'status:status_id,status_name',
+                    'roles:id,name',
+                    'roles.permissions:id,name',
+                    'lga:lga_id,lga_name,state_id',
+                    'lga.state:state_id,state_name,country_id',
+                    'lga.state.country:country_id,country_name',
+                ])->findOrFail($staff->staff_id)
+            );
+        });
         return response()->json([
             'success' => true,
-            'message' => 'OTP verified. Login successful.',
-            'lastLogin' => $user?->last_login_at?->diffForHumans(),
-            'accessToken' => $token,
-            'tokenType' => 'Bearer',
-        ], 200);
+            'message' => 'Staff profile fetched successfully.',
+            'data' => $staffData,
+        ]);
     }
 
     public function logout(Request $request)
     {
-        Auth::guard('admin')->user();
-        $request->user()->currentAccessToken()->delete();
+        $staff = $request->user('admin');
+        if (!$staff) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+
+        $staff->tokens()->delete();
+        $staff->getRoleNames()->first() ?? 'No Role Assigned';
+
         return response()->json([
             'success' => true,
-            'message' => 'Logged out successfully',
+            'message' => 'Logged out successfully'
         ]);
     }
 
     public function changePassword(Request $request)
     {
-        $request->validate([
-            'currentPassword' => 'required|string',
-            'newPassword' => 'required|string|min:8|confirmed',
-        ]);
+        try {
+            $staff = $request->user('admin');
 
-        $staff = $request->user();
+            if (!$staff) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized.'
+                ], 401);
+            }
+            $token = Password::createToken($staff);
+            $titleName = config::getTitleNameById($staff->title_id);
 
-        if (!Hash::check($request->currentPassword, $staff->password)) {
+            $staff->notify(new PasswordChangeOtp(
+                $token,
+                Str::title($titleName),
+                Str::title($staff->first_name . ' ' . $staff->last_name)
+            ));
+            return response()->json([
+                'success' => true,
+                'message' => 'Password change link has been sent to your email.',
+            ], 200);
+
+        } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Current password is incorrect.',
-            ], 400);
+                'message' => 'Something went wrong Please try again later.',
+                'logError' => $e->getMessage(),
+            ], 500);
         }
-
-        $staff->update(['password' => $request->newPassword,]);
-        return response()->json([
-            'success' => true,
-            'message' => 'Password changed successfully.',
-        ]);
     }
 
-    public function fetchStaffProfile(Request $request)
+    public function finishChangePassword(Request $request)
     {
-        $staff = Auth::guard('admin')->user();
-        $staffData = Cache::remember("staff_profile_{$staff->staff_id}", now()->addMonth(), function () use ($staff) {
-            return new AdminResource(Staff::with([
-                'title:title_id,title_name',
-                'gender:gender_id,gender_name',
-                'status:status_id,status_name'
-            ])->findOrFail($staff->staff_id));
-        });
+        $request->validate([
+            'emailAddress' => 'required|string|email',
+            'token' => 'required|string',
+            'oldPassword' => 'required|string',
+            'newPassword' => [
+                'required',
+                'confirmed',
+                PasswordRule::min(8)->mixedCase()->numbers()->symbols()
+            ],
+        ]);
+        try {
+            $staff = Staff::where('email', $request->emailAddress)->firstOrFail();
 
-        return response()->json([
-            'success' => true,
-            'data' => $staffData,
-        ], 200);
+            if (!Hash::check($request->oldPassword, $staff->password)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Old password is incorrect.'
+                ], 400);
+            }
+
+            if (Hash::check($request->newPassword, $staff->password)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'New password cannot be the same as the old password.'
+                ], 400);
+            }
+
+            $passwordBroker = Password::broker('admins')->reset(
+                [
+                    'email' => $request->emailAddress,
+                    'password' => $request->newPassword,
+                    'password_confirmation' => $request->newPassword_confirmation,
+                    'token' => $request->token,
+                ],
+
+                function ($staff, $newPassword) {
+                    $this->updateStaffPassword($staff, $newPassword);
+                }
+            );
+
+            if ($passwordBroker !== Password::PASSWORD_RESET) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to change password. Please try again.'
+                ], 500);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Password changed successfully. Please log in again.'
+            ], 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Something went wrong Please try again later.',
+                'logError' => $e->getMessage(),
+            ], 500);
+        }
     }
 }

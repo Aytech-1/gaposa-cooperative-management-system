@@ -1,0 +1,46 @@
+<?php
+
+namespace App\Models\Admin;
+use App\Models\User\User;
+use Illuminate\Database\Eloquent\Model;
+
+class Loan extends Model
+{
+    protected $primaryKey = 'loan_id';
+
+    protected $fillable = [
+        'user_id',
+        'loan_policy_id',
+        'principal_amount',
+        'interest_amount',
+        'total_payable',
+        'monthly_repayment',
+        'duration_months',
+        'outstanding_balance',
+        'status_id',
+    ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id', 'user_id');
+    }
+
+    public function policy()
+    {
+        return $this->belongsTo(LoanPolicy::class, 'loan_policy_id');
+    }
+
+    public function repayments()
+    {
+        return $this->hasMany(LoanRepayment::class, 'loan_id');
+    }
+
+    public function guarantors()
+    {
+        return $this->hasMany(Guarantor::class, 'loan_id');
+    }
+}
+
+
+
+
