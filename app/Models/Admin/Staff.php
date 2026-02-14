@@ -2,6 +2,7 @@
 
 namespace App\Models\Admin;
 
+use App\Models\Setup\SetupLga;
 use App\Models\Setup\SetupTitle;
 use App\Models\Setup\SetupGender;
 use App\Models\Setup\SetupStatus;
@@ -9,9 +10,6 @@ use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use App\Notifications\ResetPasswordNotification;
-
-
 
 
 class Staff extends Authenticatable
@@ -32,14 +30,24 @@ class Staff extends Authenticatable
         'email',
         'mobile_number',
         'home_address',
-        'password',
+        'date_of_birth',
+        'lga_id',
+        'nin',
         'passport',
+        'status_id',
+        'password',
         'created_by',
         'updated_by',
+        'login_attempt',
         'last_login_at', 
     ]; 
     protected $hidden = ['password'];
-    protected $casts = ['password' => 'hashed', 'last_login_at' => 'datetime'];
+    protected $casts = [
+        'date_of_birth' => 'date',
+        'last_login_at' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
     
     public function status()
     {
@@ -55,10 +63,12 @@ class Staff extends Authenticatable
     {
         return $this->belongsTo(SetupTitle::class, 'title_id', 'title_id');
     }
+
+    public function lga()
+    {
+        return $this->belongsTo(SetupLga::class, 'lga_id', 'lga_id');
+    }
+
     const DEFAULT_PASSPORT = 'default.png';
 
-    public function sendPasswordResetNotification($token): void
-{
-    $this->notify(new ResetPasswordNotification($token));
-}
 }

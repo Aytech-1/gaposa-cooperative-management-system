@@ -3,18 +3,14 @@
 namespace App\Http\Controllers\v1\Admin;
 
 use App\Models\User\User;
-use App\Models\Admin\Staff;
 use Illuminate\Http\Request;
 use App\Jobs\UserRegistrationJob;
 use App\Models\Setup\SetupCounter;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
-
 use Illuminate\Support\Facades\Cache;
-use App\Services\LogActivitiesService;
 use App\Http\Resources\User\UserResource;
 use App\Services\Cache\ClearCacheService;
-use Symfony\Component\HttpFoundation\JsonResponse;
 
 class UserManagementController extends Controller
 {

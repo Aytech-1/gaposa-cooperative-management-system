@@ -2,44 +2,47 @@
 
 namespace App\Http\Controllers\v1\Admin;
 
-use Illuminate\Http\Request;
-
-use Spatie\Permission\Models\Role;
 use App\Http\Controllers\Controller;
+
+use App\Http\Resources\Admin\RoleResource;
+use App\Services\Cache\ClearCacheService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Spatie\Permission\Models\Permission;
-use App\Services\Cache\ClearCacheService;
+use Spatie\Permission\Models\Role;
 
 class RoleController extends Controller
 {
-
     // Display a listing of the resource.
-        public function index()
+    public function index()
     {
-        $roles = Cache::remember('admin_roles_with_permissions',now()->addMonth(),function () {
-            return Role::where('guard_name', 'admin')
-                ->with('permissions:id,name')
-                ->orderBy('name', 'asc')
-                ->get();
-            }
-        );
+        try {
 
-        if ($roles->isEmpty()) {
+            $user = auth('admin')->user();
+            $userRole = $user->roles->first();
+            $cacheKey = "admin_roles_with_permissions_role_{$userRole->id}";
+            $roles = Cache::remember($cacheKey, now()->addMonth(), function () use ($userRole) {
+                return Role::where('guard_name', 'admin')
+                    ->where('id', '>', $userRole->id)
+                    ->with('permissions:id,name')
+                    ->orderBy('name', 'asc')
+                    ->get();
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Roles fetched successfully.',
+                'data' => RoleResource::collection($roles)
+            ], 200);
+        } catch (\Exception $e) {
+
             return response()->json([
                 'success' => false,
-                'message' => 'No roles found.',
-                'data' => []
-            ], 404);
+                'message' => 'Failed to retrieve roles.',
+                'error' => config('app.debug') ? $e->getMessage() : null
+            ], 500);
         }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Roles fetched successfully.',
-            'data' => $roles
-        ], 200);
     }
-    
-
 
     // Store a newly created resource in storage.
     public function store(Request $request)
@@ -70,16 +73,8 @@ class RoleController extends Controller
     }
 
 
-
-    //  Display the specified resource.
-    public function show(string $id)
-    {
-        
-    }
-
-
     // Update the specified resource in storage.
-      public function update(Request $request, int $id)
+    public function update(Request $request, int $id)
     {
         $role = Role::where('guard_name', 'admin')->findOrFail($id);
 
