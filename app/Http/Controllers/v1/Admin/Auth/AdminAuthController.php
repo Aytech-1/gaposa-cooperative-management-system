@@ -9,9 +9,13 @@ use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Password;
 use App\Notifications\Admin\LoginOtpMail;
+use App\Http\Resources\Admin\AdminResource;
+use App\Notifications\Admin\PasswordChangeOtp;
 use App\Notifications\Admin\ResetPasswordMail;
 use App\Notifications\Admin\AccountLockedResetPassword;
 use Illuminate\Validation\Rules\Password as PasswordRule;
@@ -114,11 +118,10 @@ class AdminAuthController extends Controller
                 ->first();
 
             if ($device) {
-
                 $staff->tokens()->delete();
-
                 $tokenResult = $staff->createToken('auth_token');
                 $tokenResult->accessToken->device_id = $deviceId;
+                $token = $tokenResult->plainTextToken;
                 $tokenResult->accessToken->save();
 
                 $staff->update([
@@ -129,7 +132,7 @@ class AdminAuthController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => 'Login successful.',
-                    'accessToken' => $tokenResult->plainTextToken,
+                    'accessToken' => $token
                 ], 200);
             }
 
@@ -147,8 +150,7 @@ class AdminAuthController extends Controller
             $staff->notify(new LoginOtpMail(
                 $otp,
                 $details['device'],
-                $details['browser'],
-                $details['ip_address'],
+                $details['location'],
                 Str::title($fullName),
                 Str::title($titleName)
             ));
@@ -161,6 +163,7 @@ class AdminAuthController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Something went wrong. Please try again later.',
+                'logError' => $e->getMessage(),
             ], 500);
         }
     }
@@ -263,7 +266,6 @@ class AdminAuthController extends Controller
         ]);
         try {
             $email = $request->emailAddress;
-
             $staff = Staff::where('email', $email)->first();
 
             if ($staff && $staff->status_id !== 1 && $staff->status_id !== 17) {
@@ -290,6 +292,7 @@ class AdminAuthController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Something went wrong Please try again later.',
+                'logError' => $e->getMessage()
             ], 500);
         }
     }
@@ -320,7 +323,7 @@ class AdminAuthController extends Controller
                     'message' => 'New password cannot be the same as the old password.'
                 ], 400);
             }
-            $status = Password::broker('centralstaff')->reset(
+            $status = Password::broker('admins')->reset(
                 [
                     'email' => $request->emailAddress,
                     'password' => $request->password,
@@ -350,6 +353,7 @@ class AdminAuthController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Something went wrong Please try again later.',
+                'logError' => $e->getMessage()
             ], 500);
         }
     }
@@ -360,5 +364,143 @@ class AdminAuthController extends Controller
         $staff->save();
         $staff->tokens()->delete();
         DB::table('user_devices')->where('user_id', $staff->staff_id)->delete();
+    }
+
+    public function fetchProfile()
+    {
+        $staff = Auth::guard('admin')->user();
+        $staffData = Cache::remember("staff_profile_{$staff->staff_id}", now()->addmonth(), function () use ($staff) {
+            return new AdminResource(
+                Staff::with([
+                    'title:title_id,title_name',
+                    'gender:gender_id,gender_name',
+                    'status:status_id,status_name',
+                    'roles:id,name',
+                    'roles.permissions:id,name',
+                    'lga:lga_id,lga_name,state_id',
+                    'lga.state:state_id,state_name,country_id',
+                    'lga.state.country:country_id,country_name',
+                ])->findOrFail($staff->staff_id)
+            );
+        });
+        return response()->json([
+            'success' => true,
+            'message' => 'Staff profile fetched successfully.',
+            'data' => $staffData,
+        ]);
+    }
+
+    public function logout(Request $request)
+    {
+        $staff = $request->user('admin');
+        if (!$staff) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+
+        $staff->tokens()->delete();
+        $staff->getRoleNames()->first() ?? 'No Role Assigned';
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Logged out successfully'
+        ]);
+    }
+
+    public function changePassword(Request $request)
+    {
+        try {
+            $staff = $request->user('admin');
+
+            if (!$staff) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized.'
+                ], 401);
+            }
+            $token = Password::createToken($staff);
+            $titleName = config::getTitleNameById($staff->title_id);
+
+            $staff->notify(new PasswordChangeOtp(
+                $token,
+                Str::title($titleName),
+                Str::title($staff->first_name . ' ' . $staff->last_name)
+            ));
+            return response()->json([
+                'success' => true,
+                'message' => 'Password change link has been sent to your email.',
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Something went wrong Please try again later.',
+                'logError' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function finishChangePassword(Request $request)
+    {
+        $request->validate([
+            'emailAddress' => 'required|string|email',
+            'token' => 'required|string',
+            'oldPassword' => 'required|string',
+            'newPassword' => [
+                'required',
+                'confirmed',
+                PasswordRule::min(8)->mixedCase()->numbers()->symbols()
+            ],
+        ]);
+        try {
+            $staff = Staff::where('email', $request->emailAddress)->firstOrFail();
+
+            if (!Hash::check($request->oldPassword, $staff->password)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Old password is incorrect.'
+                ], 400);
+            }
+
+            if (Hash::check($request->newPassword, $staff->password)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'New password cannot be the same as the old password.'
+                ], 400);
+            }
+
+            $passwordBroker = Password::broker('admins')->reset(
+                [
+                    'email' => $request->emailAddress,
+                    'password' => $request->newPassword,
+                    'password_confirmation' => $request->newPassword_confirmation,
+                    'token' => $request->token,
+                ],
+
+                function ($staff, $newPassword) {
+                    $this->updateStaffPassword($staff, $newPassword);
+                }
+            );
+
+            if ($passwordBroker !== Password::PASSWORD_RESET) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to change password. Please try again.'
+                ], 500);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Password changed successfully. Please log in again.'
+            ], 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Something went wrong Please try again later.',
+                'logError' => $e->getMessage(),
+            ], 500);
+        }
     }
 }

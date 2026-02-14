@@ -18,7 +18,15 @@ class DatabaseSeeder extends Seeder
         SetupGenderSeeder::class,
         SetupTitleSeeder::class,
         SetupStatusSeeder::class,
+        SetupCountrySeeder::class,
+        SetupStateSeeder::class,
+        SetupLgaSeeder::class,
         PermissionSeeder::class,
+        EmployementTypeSeeder::class,
+        LoanInterestTypeSeeder::class,
+        MemberContributionTypeSeeder::class,
+        PaymentChannelTypeSeeder::class,
+        LedgerTypeSeeder::class,
         ]);
     }
 }

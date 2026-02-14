@@ -7,7 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class ResetPasswordMail extends Notification
+class ResetPasswordMail extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -32,7 +32,7 @@ class ResetPasswordMail extends Notification
 
         return (new MailMessage)
             ->subject('Reset Your Password')
-            ->view('emails.central.reset-password', [
+            ->view('emails.admin.reset-password', [
                 'user' => $notifiable,
                 'url' => $url,
                 'fullName' => $this->fullName,

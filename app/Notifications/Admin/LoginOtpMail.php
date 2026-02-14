@@ -14,13 +14,10 @@ class LoginOtpMail extends Notification implements ShouldQueue
     public function __construct(
         protected string $otp,
         protected string $device,
-        protected string $browser,
-        protected string $ip,
+        protected string $location,
         protected string $fullName,
         protected string $title
-    ) {
-        //
-    }
+    ) {}
 
     public function via(object $notifiable): array
     {
@@ -30,16 +27,14 @@ class LoginOtpMail extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-
         return (new MailMessage)
             ->subject('Verify Your New Device - Unity Co-op')
             ->view('emails.admin.verify-login-otp', [
                 'device' => $this->device,
                 'otp' => $this->otp,
-                'browser' => $this->browser,
-                'ip' => $this->ip,
+                'location' => $this->location,
                 'fullName' => $this->fullName,
-                'title' =>$this->title,
+                'title' => $this->title,
             ]);
     }
 

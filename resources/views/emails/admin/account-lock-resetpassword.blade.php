@@ -4,199 +4,163 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Account Locked - Cooperative Portal</title>
+    <title>Account Locked - Unity Co-op</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f0f4f8;
-            color: #2d3748;
-            margin: 0;
-            padding: 0;
+        /* General Reset */
+        body, html {
+            margin: 0; padding: 0; width: 100% !important;
+            background-color: #f1f5f9;
+            font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
             -webkit-font-smoothing: antialiased;
         }
 
-        .wrapper {
-            width: 100%;
-            background-color: #f0f4f8;
-            padding: 40px 0;
+        /* Dark Mode Protection */
+        @media (prefers-color-scheme: dark) {
+            .header-title { color: #ffffff !important; }
+            .header-subtitle { color: #e9d1a1 !important; }
+            .email-container { background-color: #ffffff !important; }
+            .email-body h2, .email-body p { color: #0f172a !important; }
+            .details-card { background-color: #fdfbf7 !important; }
         }
 
-        .main {
-            background-color: #ffffff;
-            margin: 0 auto;
-            max-width: 600px;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-            border: 1px solid #e2e8f0;
-            overflow: hidden;
+        .email-wrapper { width: 100%; background-color: #f1f5f9; padding: 20px 0; }
+
+        .email-container {
+            max-width: 600px; margin: 0 auto; background: #ffffff;
+            border-radius: 16px; overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0;
         }
 
-        /* HEADER */
-        .header {
-            background-color: #2d5a27; 
+        /* Gradient Header - Matching your OTP exactly */
+        .email-header {
+            background: linear-gradient(135deg, #1e3a1a 0%, #2d5a27 100%);
             padding: 35px;
-            text-align: center;
         }
 
-        .header img {
-            width: 90px;
-            height: auto;
-            margin-bottom: 15px;
+        .header-table { width: 100%; border-collapse: collapse; }
+        .logo-cell { width: 75px; vertical-align: middle; }
+        .logo-cell img { width: 70px; height: auto; display: block; border-radius: 10px; }
+        .title-cell { vertical-align: middle; padding-left: 15px; }
+
+        /* Branding Text - Exactly 23px with 6px spacing */
+        .header-title {
+            color: #ffffff !important; font-size: 23px; font-weight: 800;
+            letter-spacing: 6px; margin: 0; line-height: 1.1; text-transform: uppercase;
         }
 
-        .header h2 {
-            color: #ffffff;
-            margin: 0;
-            font-size: 14px;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            font-weight: 400;
-            opacity: 0.9;
+        .header-subtitle {
+            color: #e9d1a1 !important; font-size: 13px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 6px; margin-top: 2px; display: block;
         }
 
-        /* SECURITY BANNER */
+        /* Security Alert Banner */
         .security-banner {
             background-color: #fff5f5;
             border-bottom: 1px solid #fed7d7;
             padding: 12px 20px;
             color: #c53030;
-            font-size: 14px;
-            text-align: center;
-        }
-
-        .content {
-            padding: 40px;
-        }
-
-        .content h1 {
-            color: #1a202c;
-            font-size: 22px;
-            margin-top: 0;
-            text-align: center;
-            font-weight: 700;
-        }
-
-        .content p {
-            font-size: 16px;
-            line-height: 1.6;
-            color: #4a5568;
-        }
-
-        /* DETAILS CARD */
-        .details-card {
-            background-color: #fcf9f2;
-            border: 1px solid #e9d1a1;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 25px 0;
-        }
-
-        .detail-row {
-            font-size: 14px;
-            margin-bottom: 8px;
-            color: #5d4037;
-            display: flex;
-        }
-
-        .detail-label {
-            width: 100px;
-            font-weight: 700;
-            color: #2d5a27;
-        }
-
-        /* BUTTON & EXPIRATION */
-        .cta-container {
-            text-align: center;
-            margin: 35px 0;
-        }
-
-        .button {
-            background-color: #2d5a27;
-            color: #ffffff !important;
-            padding: 16px 32px;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 600;
-            display: inline-block;
-            box-shadow: 0 4px 6px rgba(45, 90, 39, 0.2);
-        }
-
-        .expiry-notice {
-            display: block;
-            margin-top: 15px;
-            color: #be123c;
             font-size: 13px;
-            font-weight: bold;
-        }
-
-        /* FOOTER */
-        .footer {
             text-align: center;
-            padding: 30px;
-            font-size: 12px;
-            color: #718096;
-            background-color: #f8fafc;
-            border-top: 1px solid #e2e8f0;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
-        .footer b {
-            color: #4a5568;
+        /* Body Content */
+        .email-body { padding: 40px; text-align: left; }
+        .email-body h2 { color: #0f172a; font-size: 24px; margin: 0 0 15px 0; font-weight: 700; }
+        .email-body p { color: #475569; font-size: 16px; line-height: 1.6; margin-bottom: 20px; }
+
+        /* Incident Details Card */
+        .details-card {
+            background-color: #fcf9f2; border: 1px solid #e9d1a1;
+            border-radius: 12px; padding: 20px; margin: 25px 0;
+        }
+        .detail-row { font-size: 14px; margin-bottom: 8px; color: #5d4037; }
+        .detail-label { font-weight: 700; color: #2d5a27; width: 80px; display: inline-block; }
+
+        /* Button - Centered */
+        .cta-wrapper { text-align: center; margin: 35px 0; }
+        .button {
+            background-color: #2d5a27; color: #ffffff !important;
+            padding: 18px 35px; text-decoration: none; border-radius: 8px;
+            font-weight: 700; display: inline-block;
+            box-shadow: 0 4px 12px rgba(45, 90, 39, 0.2);
+        }
+
+        .timer-notice {
+            color: #be123c; font-size: 12px; font-weight: 700;
+            margin-top: 15px; display: block;
+        }
+
+        .footer {
+            padding: 30px; font-size: 12px; color: #64748b;
+            text-align: center; background-color: #f8fafc; border-top: 1px solid #e2e8f0;
+        }
+
+        /* MOBILE OPTIMIZATION */
+        @media only screen and (max-width: 600px) {
+            .email-header { padding: 25px 20px; }
+            .header-title { font-size: 18px !important; letter-spacing: 2px !important; }
+            .header-subtitle { font-size: 10px !important; letter-spacing: 2px !important; }
+            .logo-cell { width: 55px; }
+            .logo-cell img { width: 50px; }
+            .email-body { padding: 30px 20px; }
         }
     </style>
 </head>
 
 <body>
-    <div class="wrapper">
-        <div class="main">
+    <div class="email-wrapper">
+        <div class="email-container">
 
-            <div class="header">
-                <img src="https://i.ibb.co/nMywS2Xc/Gemini-Generated-Image-xg0vfkxg0vfkxg0v.png" alt="Unity Co-op Logo">
-                <h2>Unity Cooperative Society</h2>
+            <div class="email-header">
+                <table class="header-table" role="presentation">
+                    <tr>
+                        <td class="logo-cell">
+                            <img src="https://i.ibb.co/nMywS2Xc/Gemini-Generated-Image-xg0vfkxg0vfkxg0v.png" alt="Logo">
+                        </td>
+                        <td class="title-cell">
+                            <h1 class="header-title">Unity Cooperative</h1>
+                            <span class="header-subtitle">Security Notification</span>
+                        </td>
+                    </tr>
+                </table>
             </div>
 
             <div class="security-banner">
-                <strong>Security Notice:</strong> Your account has been locked for your protection.
+                Account Protection Locked
             </div>
 
-            <div class="content">
-                <h1>Administrative Access Locked</h1>
-
+            <div class="email-body">
+                <h2>Administrative Access Restricted</h2>
                 <p>Hello <strong>{{ $title }}. {{ $fullName }}</strong>,</p>
-
-                <p>
-                    For the security of the cooperative's financial data and member records, your administrative account has been automatically locked following multiple failed authentication attempts.
-                </p>
+                <p>To safeguard the cooperative's data, your account has been temporarily locked following multiple unsuccessful login attempts.</p>
 
                 <div class="details-card">
                     <div class="detail-row"><span class="detail-label">Device:</span> {{ $device }}</div>
-                    <div class="detail-row"><span class="detail-label">Browser:</span> {{ $browser }}</div>
                     <div class="detail-row"><span class="detail-label">Location:</span> {{ $location }}</div>
+                    <div class="detail-row"><span class="detail-label">Browser:</span> {{ $browser}}</div>
                 </div>
 
-                <p>To restore access to the Administration Portal, please complete the identity verification process:</p>
+                <p>To regain access, please click the secure button below to verify your identity.</p>
 
-                <div class="cta-container">
-                    <a href="{{ $url }}" class="button">
-                        Verify Identity & Unlock
-                    </a>
-                    <span class="expiry-notice">⏱ This security link will expire in 10 minutes</span>
+                <div class="cta-wrapper">
+                    <a href="{{ $url }}" class="button">Verify & Unlock Account</a>
+                    <span class="timer-notice">⏱ This link is valid for 10 minutes</span>
                 </div>
 
-                <p style="font-size:14px; color:#718096; text-align: center; font-style: italic;">
-                    If you did not attempt this login, please alert the Security Committee immediately.
+                <p style="font-size: 14px; color: #64748b; font-style: italic; text-align: center;">
+                    If you did not perform this action, please contact the ICT Security Unit immediately.
                 </p>
             </div>
 
             <div class="footer">
-                <p>
-                    &copy; {{ date('Y') }} <b>Unity Cooperative Society</b><br>
-                    Strength in Community & Growth<br>
-                    <i>Portal Security Notification System</i>
-                </p>
+                &copy; {{ date('Y') }} <b>Unity Cooperative Society</b><br>
+                Strength in Community & Growth
             </div>
 
         </div>
     </div>
 </body>
-
 </html>
