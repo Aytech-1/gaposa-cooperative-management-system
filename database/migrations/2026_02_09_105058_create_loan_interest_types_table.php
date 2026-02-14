@@ -9,7 +9,7 @@ return new class extends Migration
     // Run the migrations.
     public function up(): void
     {
-        Schema::create('loan_interest_types', function (Blueprint $table) {
+        Schema::create('loan_interest_types', function (Blueprint $table) {// E.G FLAT_RATE, REDUCING_BALANCE, AND DECLINING_BALANCE
             $table->id('loan_interest_type_id');
             $table->string('loan_interest_type_name', 100)->unique();
             $table->timestamps();

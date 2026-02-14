@@ -9,7 +9,7 @@ return new class extends Migration
     // Run the migrations.
     public function up(): void
     {
-        Schema::create('ledger_types', function (Blueprint $table) {
+        Schema::create('ledger_types', function (Blueprint $table) {// E.G CONTRIBUTION, LOAN_DISBURSEMENT
             $table->id('ledger_type_id');
             $table->string('ledger_type_name', 100)->unique();
             $table->timestamps();
