@@ -24,38 +24,28 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
     Route::prefix('admin')->group(function () {
-        
         Route::middleware(['auth:admin', 'trust.device'])->group(function () {
             Route::apiResource('role', RoleController::class)->middleware('permission:manage role');
             Route::apiResource('activities', ActivitiesController::class)->only(['index', 'show'])->middleware('permission:view activities');
             Route::apiResource('staff', AdminController::class)->middleware('permission:manage staff');
             Route::apiResource('users', UserManagementController::class)->middleware('permission:manage users');
             Route::post('staff-passport/{id}', [StaffPassportController::class, 'update']);
-
-            
         });
-
+        
         // Route::apiResource('role', RoleController::class);
         // Route::apiResource('staff', AdminController::class);
     });
 
-    
-
     Route::prefix('user')->group(function () {
-        Route::post('auth/login', [UserAuthController::class, 'login'])->middleware('throttle:5,1');
-        Route::post('auth/reset-password', [UserAuthController::class, 'resetPassword'])->middleware('throttle:5,1');
-        Route::post('auth/finish-reset-password', [UserAuthController::class, 'finishPasswordReset'])->middleware('throttle:5,1');
-        Route::post('auth/resend-otp', [UserAuthController::class, 'resendOtp'])->middleware('throttle:5,1');
-
         Route::middleware('auth:user')->group(function () {
             Route::post('auth/logout', [UserAuthController::class, 'logout']);
             Route::get('auth/profile', [UserAuthController::class, 'fetchUserProfile']);
             Route::post('auth/change-password', [UserAuthController::class, 'changePassword']);
-            Route::apiResource('update', UserManagementController::class)->only(['update','store']);
+            Route::apiResource('update', UserManagementController::class)->only('update');
             Route::post('user-passport/{id}', [UserPassportController::class, 'update']);
         });
+        Route::apiResource('signup', UserManagementController::class)->only('store');
     });
-
 
     Route::prefix('setup')->group(function () {
         Route::get('country', [CountryController::class, 'index']);
