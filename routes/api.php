@@ -48,11 +48,6 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::prefix('user')->group(function () {
-        Route::post('auth/login', [UserAuthController::class, 'login'])->middleware('throttle:5,1');
-        Route::post('auth/reset-password', [UserAuthController::class, 'resetPassword'])->middleware('throttle:5,1');
-        Route::post('auth/finish-reset-password', [UserAuthController::class, 'finishPasswordReset'])->middleware('throttle:5,1');
-        Route::post('auth/resend-otp', [UserAuthController::class, 'resendOtp'])->middleware('throttle:5,1');
-
         Route::middleware('auth:user')->group(function () {
             Route::post('auth/logout', [UserAuthController::class, 'logout']);
             Route::get('auth/profile', [UserAuthController::class, 'fetchUserProfile']);
@@ -60,6 +55,7 @@ Route::prefix('v1')->group(function () {
             Route::apiResource('update', UserManagementController::class)->only(['update', 'store']);
             Route::post('user-passport/{id}', [UserPassportController::class, 'update']);
         });
+        Route::apiResource('signup', UserManagementController::class)->only('store');
     });
 
     Route::prefix('setup')->group(function () {
