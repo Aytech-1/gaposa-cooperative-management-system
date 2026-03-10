@@ -64,8 +64,8 @@ class AdminController extends Controller
                 'success' => false,
                 'message' => 'Failed to retrieve staff records: ' . $e->getMessage()
             ], 500);
-   
-    }}
+        }
+    }
 
 
     // Store a newly created resource in storage.
@@ -137,7 +137,7 @@ class AdminController extends Controller
     }
 
     // Display the specified resource.
-   public function show(string $id)
+    public function show(string $id)
     {
         try {
             $staffData = Cache::remember("staff_profile_{$id}", now()->addMonth(), function () use ($id) {
@@ -165,7 +165,7 @@ class AdminController extends Controller
     }
 
     // Update the specified resource in storage.
-     public function update(Request $request, string $id)
+    public function update(Request $request, string $id)
     {
         $updateAdmin = Staff::with(['roles'])->findOrFail($id);
         $dataBeforeUpdate = Arr::only($updateAdmin->getOriginal(), [
@@ -242,10 +242,10 @@ class AdminController extends Controller
                 ]
             );
 
-        return response()->json([
-            'success' => true,
-            'message' => 'User updated successfully',
-        ], 200);
+            return response()->json([
+                'success' => true,
+                'message' => 'User updated successfully',
+            ], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

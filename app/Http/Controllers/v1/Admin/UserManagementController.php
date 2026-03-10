@@ -2,73 +2,103 @@
 
 namespace App\Http\Controllers\v1\Admin;
 
-use App\Models\User\User;
-use Illuminate\Http\Request;
-use App\Jobs\UserRegistrationJob;
-use App\Models\Setup\SetupCounter;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Admin\UserResource;
+use App\Models\Setup\SetupCounter;
+use App\Models\User\User;
+use App\Services\Cache\ClearCacheService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
-use App\Http\Resources\User\UserResource;
-use App\Services\Cache\ClearCacheService;
+use Symfony\Component\HttpFoundation\JsonResponse;
 
 class UserManagementController extends Controller
 {
     // Display a listing of the resource.
     public function index(Request $request)
     {
-        $user = Auth::guard('admin')->user();
-        $cursor = $request->get('cursor', 'first_page');
-        $cacheKey = "user_list_{$cursor}";
-        $userData = Cache::tags('user_list')->flexible($cacheKey, [now()->addMonth(), null], function () use ($user) {
-            return User::with([
-                'title:title_id,title_name',
-                'gender:gender_id,gender_name',
-                'status:status_id,status_name'
-            ])
-                ->where('user_id', '!=', $user->user_id)
-                ->orderBy('last_name', 'asc')
-                ->cursorPaginate(30);
-        });
+        try {
+            $user = Auth::guard('admin')->user();
+            $cursor = $request->get('cursor', 'first_page');
+            $cacheKey = "user_list_{$cursor}";
+            $userData = Cache::tags('user_list')->flexible($cacheKey, [now()->addMonth(), null], function () use ($user) {
+                return User::with([
+                    'title:title_id,title_name',
+                    'gender:gender_id,gender_name',
+                    'status:status_id,status_name',
+                    'lga:lga_id,lga_name,state_id',
+                    'lga.state:state_id,state_name,country_id',
+                    'lga.state.country:country_id,country_name',
+                ])
+                    ->where('user_id', '!=', $user->user_id)
+                    ->orderBy('last_name', 'asc')
+                    ->cursorPaginate(30);
+            });
 
-        if ($userData->isEmpty()) {
+            if ($userData->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No user records found.',
+                    'data' => []
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User records fetched successfully.',
+                'data' => UserResource::collection($userData),
+                'pagination' => [
+                    'next_cursor' => $userData->nextCursor()?->encode(),
+                    'previous_cursor' => $userData->previousCursor()?->encode(),
+                ],
+            ], 200);
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'No users found.',
-            ], 404);
+                'message' => 'Failed to retrieve user records: ' . $e->getMessage()
+            ], 500);
         }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'User records fetched successfully.',
-            'data' => UserResource::collection($userData),
-            'pagination' => [
-                'nextCursor' => $userData->nextCursor()?->encode(),
-                'previousCursor' => $userData->previousCursor()?->encode(),
-            ]
-        ], 200);
     }
 
     // Store a newly created resource in storage.
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate([
+        $request->validate([
             'titleId' => 'required|int|exists:setup_titles,title_id',
+            'staffCategoryId' => 'required|int|exists:staff_categories,staff_category_id',
+            'membershipTypeId' => 'required|int|exists:membership_types,membership_type_id',
+            'monthlySalary' => 'required|numeric|min:0',
             'firstName' => ['required', 'string', 'regex:/^[A-Za-z\s\'-]+$/', 'min:2', 'max:50'],
             'middleName' => ['nullable', 'string', 'regex:/^[A-Za-z\s\'-]+$/', 'min:2', 'max:50'],
             'lastName' => ['required', 'string', 'regex:/^[A-Za-z\s\'-]+$/', 'min:2', 'max:50'],
             'genderId' => 'required|int|exists:setup_genders,gender_id',
             'emailAddress' => 'required|string|email|unique:users,email',
             'mobileNumber' => ['required', 'string', 'unique:users,mobile_number', 'regex:/^\+?[1-9]\d{1,14}$/'],
-            'homeAddress' => 'required|string',
+            'homeAddress' => 'nullable|string'
         ]);
 
-        $userId = SetupCounter::generateCustomId('USER');
         $admin = Auth::guard('admin')->user();
-      
-        UserRegistrationJob::dispatch($userId, $validated, $admin->staff_id);
+        $userId = SetupCounter::generateCustomId('USER');
+        User::create([
+            'user_id' => $userId,
+            'title_id' => $request->titleId,
+            'staff_category_id' => $request->staffCategoryId,
+            'membership_type_id' => $request->membershipTypeId,
+            'first_name' => strtoupper($request->firstName),
+            'middle_name' => strtoupper($request->middleName),
+            'last_name' => strtoupper($request->lastName),
+            'gender_id' => $request->genderId,
+            'email' => strtolower($request->emailAddress),
+            'mobile_number' => $request->mobileNumber,
+            'home_address' => strtoupper($request->homeAddress),
+            'monthly_salary' => $request->monthlySalary,
+            'created_by' => $admin->staff_id ?? $userId,
+            'updated_by' => $admin->staff_id ?? $userId,
+            'password'      => $userId,
+        ]);
+        ClearCacheService::clearListCache('user_list');
         return response()->json([
-            'success' => true,
+            'success'  => true,
             'message' => 'User created successfully',
         ], 201);
     }
@@ -76,20 +106,29 @@ class UserManagementController extends Controller
     // Display the specified resource.
     public function show(string $id)
     {
-        $userData = Cache::remember("user_profile_{$id}", now()->addMonth(), function () use ($id) {
+        try {
+            $userData = Cache::remember("user_profile_{$id}", now()->addMonth(), function () use ($id) {
+                return new UserResource(User::with([
+                    'title:title_id,title_name',
+                    'gender:gender_id,gender_name',
+                    'status:status_id,status_name',
+                    'lga:lga_id,lga_name,state_id',
+                    'lga.state:state_id,state_name,country_id',
+                    'lga.state.country:country_id,country_name'
+                ])->findOrFail($id));
+            });
 
-            return new UserResource(User::with([
-                'title:title_id,title_name',
-                'gender:gender_id,gender_name',
-                'status:status_id,status_name'
-            ])->findOrFail($id));
-        });
-
-        return response()->json([
-            'success' => true,
-            'message' => 'User profile fetched successfully.',
-            'data' => $userData
-        ], 200);
+            return response()->json([
+                'success' => true,
+                'message' => 'Staff profile fetched successfully.',
+                'data' => $userData
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve staff profile: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     // Update the specified resource in storage.
@@ -102,24 +141,24 @@ class UserManagementController extends Controller
             'middleName'    => ['nullable', 'string', 'regex:/^[A-Za-z\s\'-]+$/', 'min:2', 'max:50'],
             'lastName'      => ['required', 'string', 'regex:/^[A-Za-z\s\'-]+$/', 'min:2', 'max:50'],
             'genderId' => 'required|int|exists:setup_genders,gender_id',
-            'emailAddress' => 'required|string|email|unique:users,email,'.$id.',user_id',
-            'mobileNumber' => ['required','string','unique:users,mobile_number,'.$id.',user_id','regex:/^\+?[1-9]\d{1,14}$/',],
+            'emailAddress' => 'required|string|email|unique:users,email,' . $id . ',user_id',
+            'mobileNumber' => ['required', 'string', 'unique:users,mobile_number,' . $id . ',user_id', 'regex:/^\+?[1-9]\d{1,14}$/',],
             'homeAddress' => 'required|string',
         ]);
 
         $staff = Auth::guard('admin')->user();
         $updateUser->update([
             'title_id'     => $request->titleId,
-            'first_name'   => strtoupper( $request->firstName),
-            'middle_name'  =>strtoupper ($request->middleName),
-            'last_name'    =>strtoupper($request->lastName),
+            'first_name'   => strtoupper($request->firstName),
+            'middle_name'  => strtoupper($request->middleName),
+            'last_name'    => strtoupper($request->lastName),
             'gender_id'    => $request->genderId,
             'email'        => strtolower($request->emailAddress),
-            'mobile_number'=> $request->mobileNumber,
+            'mobile_number' => $request->mobileNumber,
             'home_address' => strtoupper($request->homeAddress),
             'updated_by'   => $staff->staff_id ?? $id,
         ]);
-        
+
         ClearCacheService::clearListCache('user_list');
         Cache::forget("user_profile_{$id}");
         return response()->json([
@@ -127,5 +166,4 @@ class UserManagementController extends Controller
             'message' => 'User updated successfully',
         ], 200);
     }
-
 }
