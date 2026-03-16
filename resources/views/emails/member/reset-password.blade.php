@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Member Login Verification - Unity Co-op</title>
+    <title>Member Password Reset - Unity Co-op</title>
     <style>
+        /* General Reset */
         body, html {
             margin: 0; padding: 0; width: 100% !important;
             background-color: #f1f5f9;
@@ -13,6 +13,7 @@
             -webkit-font-smoothing: antialiased;
         }
 
+        /* Dark Mode Protection */
         @media (prefers-color-scheme: dark) {
             .header-title { color: #ffffff !important; }
             .header-subtitle { color: #e9d1a1 !important; }
@@ -39,7 +40,7 @@
         .logo-cell img { width: 70px; height: auto; display: block; border-radius: 10px; }
         .title-cell { vertical-align: middle; padding-left: 15px; }
 
-        /* Branding Text - Kept at 23px / 6px spacing */
+        /* Branding Text - 23px with 6px spacing */
         .header-title {
             color: #ffffff !important; font-size: 23px; font-weight: 800;
             letter-spacing: 6px; margin: 0; line-height: 1.1; text-transform: uppercase;
@@ -50,39 +51,31 @@
             text-transform: uppercase; letter-spacing: 6px; margin-top: 2px; display: block;
         }
 
-        /* Body - Left Aligned */
+        /* Body - Left Aligned Text */
         .email-body { padding: 40px; text-align: left; }
         .email-body h2 { color: #0f172a; font-size: 24px; margin: 0 0 15px 0; font-weight: 700; }
-        .email-body p { color: #475569; font-size: 16px; line-height: 1.6; margin-bottom: 20px; }
+        .salutation { color: #2d5a27; font-weight: 800; margin-bottom: 8px; display: block; }
+        .email-body p { color: #475569; font-size: 16px; line-height: 1.6; margin-bottom: 24px; }
 
-        /* OTP Code Styling - Centralized */
-        .otp-box-wrapper { text-align: center; margin: 30px 0; }
-        
-        .otp-container {
-            background-color: #fdfbf7; border: 1px solid #e9d1a1;
-            border-radius: 12px; padding: 25px;
-            display: inline-block; min-width: 400px;
+        /* Button - Centralized */
+        .btn-wrapper { text-align: center; margin: 35px 0; }
+        .btn {
+            display: inline-block;
+            background-color: #2d5a27 !important;
+            padding: 16px 40px;
+            border-radius: 8px;
+            text-decoration: none !important;
+            box-shadow: 0 4px 12px rgba(45, 90, 39, 0.2);
         }
-
-        .otp-label {
-            font-size: 11px; color: #8a6d3b; text-transform: uppercase;
-            letter-spacing: 2px; margin-bottom: 8px; display: block; font-weight: 700;
-        }
-
-        .otp-code {
-            font-size: 36px; font-weight: 800; letter-spacing: 8px;
-            color: #2d5a27; margin: 0; font-family: 'Consolas', monospace;
+        .btn-text {
+            color: #ffffff !important;
+            font-weight: 700;
+            font-size: 16px;
         }
 
         .timer-notice {
-            color: #c53030; font-size: 12px; font-weight: 600;
-            margin-top: 12px; display: block;
-        }
-
-        .details-info {
-            font-size: 13px; color: #718096; background-color: #f8fafc;
-            padding: 15px; border-radius: 8px; margin-top: 30px;
-            border: 1px solid #edf2f7; line-height: 1.6;
+            color: #c53030; font-size: 12px; font-weight: 700;
+            margin-top: 15px; display: block;
         }
 
         .footer {
@@ -98,16 +91,13 @@
             .logo-cell { width: 55px; }
             .logo-cell img { width: 50px; }
             .email-body { padding: 30px 20px; }
-            .otp-code { font-size: 28px !important; letter-spacing: 4px !important; }
-            .otp-container { min-width: 85%; }
         }
     </style>
 </head>
-
 <body>
     <div class="email-wrapper">
         <div class="email-container">
-
+            
             <div class="email-header">
                 <table class="header-table" role="presentation">
                     <tr>
@@ -116,36 +106,37 @@
                         </td>
                         <td class="title-cell">
                             <h1 class="header-title">Unity Cooperative</h1>
-                            <span class="header-subtitle">Member Security Portal</span>
+                            <span class="header-subtitle">Member Security</span>
                         </td>
                     </tr>
                 </table>
             </div>
 
             <div class="email-body">
-                <h2>Secure Your Login</h2>
-                <p>Hello <strong>{{ $title }}. {{ $fullName }}</strong>,</p>
-                <p>To access your member dashboard and cooperative records, please use the following security code:</p>
+                <span class="salutation">Dear, {{ $title }}. {{ $fullName }},</span>
+                <h2>Reset Your Password</h2>
+                <p>We received a request to reset the password for your Unity Cooperative member account. To ensure your financial records remain secure, please click the button below to create a new password.</p>
 
-                <div class="otp-box-wrapper">
-                    <div class="otp-container">
-                        <span class="otp-label">Member Verification Code</span>
-                        <h1 class="otp-code">{{ $otp }}</h1>
-                        <span class="timer-notice">⏱ Valid for 10 minutes</span>
-                    </div>
+                <div class="btn-wrapper">
+                    <a href="{{ $url }}" class="btn">
+                        <span class="btn-text">Set New Password</span>
+                    </a>
+                    <span class="timer-notice">⏱ This link is valid for 10 minutes</span>
                 </div>
 
-                <p style="font-size: 14px; color: #64748b;">For your protection, never share this code with anyone. Unity Cooperative staff will never ask for your OTP over the phone or via email.</p>
-
-                <div class="details-info">
-                    Login requested from: <b>{{ $location }}</b><br>
-                    Platform: <b>{{ $device }}</b>
-                </div>
+                <p style="font-size: 14px; color: #64748b; font-style: italic;">
+                    If you did not make this request, your account is still secure. You can safely ignore this email.
+                </p>
+                
+                <p style="margin-top: 30px; border-top: 1px solid #f1f5f9; padding-top: 20px;">
+                    Kind regards,<br>
+                    <strong>Unity Member Services</strong>
+                </p>
             </div>
 
             <div class="footer">
                 &copy; {{ date('Y') }} <b>Unity Cooperative Society</b><br>
-                Empowering Members • Building Community<br>
+                Strength in Community & Growth<br>
                 Member Protection Services
             </div>
 

@@ -49,12 +49,15 @@ Route::prefix('v1')->group(function () {
         Route::prefix('auth')->controller(UserAuthController::class)->group(function () {
             Route::post('login', 'login')->middleware('throttle:5,1');
             Route::post('verify-login-otp', 'verifyOtp')->middleware('throttle:5,1');
+            Route::post('reset-password', 'resetPassword')->middleware('throttle:5,1');
+            Route::post('resend-mail', 'resendPasswordResetLink')->middleware('throttle:5,1');
+            Route::post('finish-reset-password', 'finishResetPassword')->middleware('throttle:5,1');
         });
 
-        Route::middleware('auth:user')->group(function () {
-            Route::post('auth/logout', [UserAuthController::class, 'logout']);
-            Route::get('auth/profile', [UserAuthController::class, 'fetchUserProfile']);
-            Route::post('auth/change-password', [UserAuthController::class, 'changePassword']);
+        Route::middleware(['auth:user', 'trust.device'])->group(function () {
+            Route::post('logout', [UserAuthController::class, 'logout']);
+            Route::get('user-profile', [UserAuthController::class, 'fetchProfile']);
+            Route::post('change-password', [UserAuthController::class, 'changePassword']);
             Route::apiResource('update', UserManagementController::class)->only(['update', 'store']);
             Route::post('user-passport/{id}', [UserPassportController::class, 'update']);
         });

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Admin\UserResource;
 use App\Models\User\User;
 use App\Notifications\Member\LoginOtpMail;
+use App\Notifications\member\ResetPasswordMail;
 use App\Services\Config;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -60,10 +61,10 @@ class UserAuthController extends Controller
             }
 
             $deviceId = $request->header('X-Device-ID');
-            $fullName = $user->first_name . ' ' . $user->last_name;
+            $fullName = $user->last_name . ' ' . $user->first_name;
 
             $device = DB::table('user_devices')
-                ->where('user_id', $user->User_id)
+                ->where('user_id', $user->user_id)
                 ->where('device_id', $deviceId)
                 ->whereNotNull('verified_at')
                 ->first();
@@ -89,7 +90,7 @@ class UserAuthController extends Controller
             $otp = rand(100000, 999999);
 
             DB::table('otps')->updateOrInsert(
-                ['user_id' => $user->User_id],
+                ['user_id' => $user->user_id],
                 [
                     'otp_code' => Hash::make($otp),
                     'expires_at' => Carbon::now()->addMinutes(10),
@@ -198,7 +199,7 @@ class UserAuthController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'OTP verified. Login successful.',
+                'message' => 'OTP verified, Login successful.',
                 'accessToken' => $token,
             ], 200);
         } catch (\Throwable $e) {
@@ -219,16 +220,18 @@ class UserAuthController extends Controller
             $email = $request->emailAddress;
             $user = User::where('email', $email)->first();
 
-            if ($user && $user->status_id !== 1 && $user->status_id !== 17) {
+            if ($user && $user->status_id !== 1) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Your account is suspended. Please contact support.'
                 ], 403);
             }
-            $fullName = $user->first_name . ' ' . $user->last_name;
-            $titleName = Config::getTitleNameById($user->title_id);
+
 
             if ($user) {
+                $fullName = $user->last_name. ' ' .$user->first_name;
+                $titleName = Config::getTitleNameById($user->title_id);
+
                 $token = Password::createToken($user);
                 $user->notify(new ResetPasswordMail($token, Str::title($fullName), Str::title($titleName)));
             }
@@ -265,7 +268,7 @@ class UserAuthController extends Controller
     {
         $request->validate([
             'token' => 'required|string',
-            'emailAddress' => 'required|string|email|exists:user,email',
+            'emailAddress' => 'required|string|email|exists:users,email',
             'password' => [
                 'required',
                 'confirmed',
@@ -282,7 +285,7 @@ class UserAuthController extends Controller
                     'message' => 'New password cannot be the same as the old password.'
                 ], 400);
             }
-            $status = Password::broker('user')->reset(
+            $status = Password::broker('users')->reset(
                 [
                     'email' => $request->emailAddress,
                     'password' => $request->password,
@@ -290,10 +293,10 @@ class UserAuthController extends Controller
                     'token' => $request->token,
                 ],
 
-                function ($User, $password) {
-                    $this->updateUserPassword($User, $password);
-                    $User->status_id = 1;
-                    $User->save();
+                function ($user, $password) {
+                    $this->updateUserPassword($user, $password);
+                    $user->status_id = 1;
+                    $user->save();
                 }
             );
 
@@ -355,5 +358,49 @@ class UserAuthController extends Controller
             'success' => true,
             'message' => 'Logged out successfully'
         ]);
+    }
+
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'oldPassword' => 'required|string|min:8',
+            'newPassword' => [
+                'required',
+                'confirmed',
+                PasswordRule::min(8)->mixedCase()->numbers()->symbols()
+            ],
+        ]);
+        try {
+            $user = $request->user('user');
+
+            if (!Hash::check($request->oldPassword, $user->password)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Old password is incorrect.'
+                ], 400);
+            }
+
+            if (Hash::check($request->newPassword, $user->password)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'New password cannot be the same as the old password.'
+                ], 400);
+            }
+
+            $user->update([
+                'password' => Hash::make($request->newPassword),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Password changed successfully'
+            ], 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Something went wrong Please try again later.',
+                'logError' => $e->getMessage(),
+            ], 500);
+        }
     }
 }
