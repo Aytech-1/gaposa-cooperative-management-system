@@ -2,18 +2,19 @@
 
 namespace App\Models\User;
 
-use App\Models\Admin\Loan;
-use App\Models\Admin\Wallet;
-use App\Models\Setup\SetupLga;
 use App\Models\Admin\Guarantor;
-use App\Models\Setup\SetupTitle;
-use App\Models\Setup\SetupGender;
-use App\Models\Setup\SetupStatus;
+use App\Models\Admin\Loan;
 use App\Models\Admin\MemberContribution;
 use App\Models\Admin\MemberTargetSaving;
+use App\Models\Admin\Wallet;
+use App\Models\Setup\SetupGender;
+use App\Models\Setup\SetupLga;
+use App\Models\Setup\SetupStatus;
+use App\Models\Setup\SetupTitle;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Illuminate\Foundation\Auth\User as Authenticatable;
+
 
 class User extends Authenticatable
 {
@@ -51,9 +52,7 @@ class User extends Authenticatable
     ];
 
 
-    protected $hidden = [
-        'password',
-    ];
+    protected $hidden = ['password',];
 
     protected $casts = [
         'date_of_birth' => 'date',

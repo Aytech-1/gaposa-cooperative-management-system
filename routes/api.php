@@ -3,6 +3,10 @@
 use App\Http\Controllers\v1\Admin\ActivitiesController;
 use App\Http\Controllers\v1\Admin\AdminController;
 use App\Http\Controllers\v1\Admin\Auth\AdminAuthController;
+use App\Http\Controllers\v1\Admin\LoanPolicyController;
+use App\Http\Controllers\v1\Admin\MemberContributionController;
+use App\Http\Controllers\v1\Admin\MemberSavingController;
+use App\Http\Controllers\v1\Admin\MemberTargetSavingController;
 use App\Http\Controllers\v1\Admin\RoleController;
 use App\Http\Controllers\v1\Admin\StaffPassportController;
 use App\Http\Controllers\v1\Admin\UserManagementController;
@@ -39,6 +43,13 @@ Route::prefix('v1')->group(function () {
             Route::post('staff-passport/{id}', [StaffPassportController::class, 'update']);
             Route::get('fetch-profile', [AdminAuthController::class, 'fetchProfile']);
             Route::post('logout', [AdminAuthController::class, 'logout']);
+            Route::apiResource('loan-policies', LoanPolicyController::class)->except(['destroy']);
+            Route::post('deposit-contribution', [MemberContributionController::class, 'depositContribution']);
+            Route::get('fetch-all-contributions', [MemberContributionController::class, 'fetchAllContributions']);
+            Route::get('fetch-single-contribution/{id}', [MemberContributionController::class, 'fetchSingleContribution']);
+            Route::post('approve-withdrawal/{id}', [MemberContributionController::class, 'approveWithdrawal']);
+            Route::apiResource('member-target-savings', MemberTargetSavingController::class)->except(['destroy']);
+            Route::apiResource('member-savings', MemberSavingController::class)->except(['destroy']);
         });
         Route::post('finish-change-password', [AdminAuthController::class, 'finishChangePassword'])->middleware('throttle:5,1');
         Route::apiResource('role', RoleController::class);
@@ -60,6 +71,7 @@ Route::prefix('v1')->group(function () {
             Route::post('change-password', [UserAuthController::class, 'changePassword']);
             Route::apiResource('update', UserManagementController::class)->only(['update', 'store']);
             Route::post('user-passport/{id}', [UserPassportController::class, 'update']);
+            Route::post('withdraw-contribution', [MemberContributionController::class, 'withdrawContribution']);
         });
         Route::apiResource('signup', UserManagementController::class)->only('store');
     });

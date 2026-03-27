@@ -13,11 +13,12 @@ return new class extends Migration
             $table->id('ledger_entry_id');
             $table->string('user_id');
             $table->unsignedBigInteger('wallet_id');
-            $table->string('entry_type')->nullable();// SAVINGS_DEPOSIT, LOAN_DISBURSEMENT, REPAYMENT, WITHDRAWAL, INTEREST, ADJUSTMENT
+            $table->string('entry_type')->nullable(); // SAVINGS_DEPOSIT, LOAN_DISBURSEMENT, REPAYMENT, WITHDRAWAL, INTEREST, ADJUSTMENT
+            $table->string('transaction_type')->nullable();
             $table->decimal('amount', 14, 2);
             $table->decimal('balance_before', 14, 2);
             $table->decimal('balance_after', 14, 2);
-            $table->string('reference')->unique();
+            $table->string('reference')->unique()->nullable();
             $table->text('description')->nullable();
             $table->string('created_by');
             $table->timestamps();
