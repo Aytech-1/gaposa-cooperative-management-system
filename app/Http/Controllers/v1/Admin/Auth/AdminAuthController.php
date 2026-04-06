@@ -260,7 +260,6 @@ class AdminAuthController extends Controller
 
     public function resetPassword(Request $request, bool $resendLink = false)
     {
-
         $request->validate([
             'emailAddress' => 'required|string|email',
         ]);
