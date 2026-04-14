@@ -20,7 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->api([
             \App\Http\Middleware\ForceJsonResponse::class,
-            \App\Http\Middleware\GlobalApiKey::class,
+            \App\Http\Middleware\GlobalApiKey::class,     
         ]);
 
         $middleware->alias([
