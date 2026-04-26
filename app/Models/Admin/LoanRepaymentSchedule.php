@@ -2,8 +2,10 @@
 
 namespace App\Models\Admin;
 
-use Predis\Response\Status;
+use App\Models\Setup\SetupStatus;
+use App\Models\User\User;
 use Illuminate\Database\Eloquent\Model;
+use Predis\Response\Status;
 
 
 class LoanRepaymentSchedule extends Model
@@ -11,6 +13,7 @@ class LoanRepaymentSchedule extends Model
     protected $primaryKey = 'loan_repayment_schedule_id';
 
     protected $fillable = [
+        'user_id',
         'loan_id',
         'installment_number',
         'due_date',
@@ -34,6 +37,11 @@ class LoanRepaymentSchedule extends Model
         'paid_at' => 'datetime'
     ];
 
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id', 'user_id');
+    }
+
     public function loan()
     {
         return $this->belongsTo(Loan::class, 'loan_id', 'loan_id');
@@ -41,6 +49,6 @@ class LoanRepaymentSchedule extends Model
 
     public function status()
     {
-        return $this->belongsTo(Status::class, 'status_id', 'status_id');
+        return $this->belongsTo(SetupStatus::class, 'status_id', 'status_id');
     }
 }

@@ -3,20 +3,20 @@
 namespace App\Http\Controllers\v1\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\Admin\ReportResource;
-use App\Models\Admin\LedgerEntry;
+use App\Http\Resources\Admin\LoanRepaymentScheduleResource;
+use App\Models\Admin\LoanRepaymentSchedule;
 use Illuminate\Http\Request;
 
-class ReportController extends Controller
+class LoanRepaymentScheduleController extends Controller
 {
     // Display a listing of the resource.
     public function index(Request $request)
     {
         try {
             $userId = $request->header('X-User-ID');
-            $data = LedgerEntry::where('user_id', $userId)
+            $data = LoanRepaymentSchedule::where('user_id', $userId)
                 ->orderBy('created_at', 'desc')
-                ->orderBy('ledger_entry_id', 'desc')
+                ->orderBy('loan_id', 'desc')
                 ->cursorPaginate(10);
             if ($data->isEmpty()) {
                 return response()->json([
@@ -28,7 +28,7 @@ class ReportController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Records fetched successfully.',
-                'data' => ReportResource::collection($data),
+                'data' => LoanRepaymentScheduleResource::collection($data),
                 'pagination' => [
                     'per_page' => $data->perPage(),
                     'next_cursor' => optional($data->nextCursor())->encode(),
@@ -36,7 +36,6 @@ class ReportController extends Controller
                     'has_more' => $data->hasMorePages(),
                 ],
             ], 200);
-            
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -44,6 +43,4 @@ class ReportController extends Controller
             ], 400);
         }
     }
-
-
 }

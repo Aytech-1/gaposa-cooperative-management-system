@@ -5,12 +5,15 @@ use App\Http\Controllers\v1\Admin\AdminController;
 use App\Http\Controllers\v1\Admin\Auth\AdminAuthController;
 use App\Http\Controllers\v1\Admin\LoanController;
 use App\Http\Controllers\v1\Admin\LoanPolicyController;
+use App\Http\Controllers\v1\Admin\LoanRepaymentScheduleController;
 use App\Http\Controllers\v1\Admin\MemberContributionController;
 use App\Http\Controllers\v1\Admin\MemberSavingController;
 use App\Http\Controllers\v1\Admin\MemberTargetSavingController;
+use App\Http\Controllers\v1\Admin\ReportController;
 use App\Http\Controllers\v1\Admin\RoleController;
 use App\Http\Controllers\v1\Admin\StaffPassportController;
 use App\Http\Controllers\v1\Admin\UserManagementController;
+use App\Http\Controllers\v1\Admin\WithdrawalRequestController;
 use App\Http\Controllers\v1\Setup\CountryController;
 use App\Http\Controllers\v1\Setup\GenderController;
 use App\Http\Controllers\v1\Setup\LgaController;
@@ -36,14 +39,14 @@ Route::prefix('v1')->group(function () {
         });
 
         Route::middleware(['auth:admin', 'trust.device'])->group(function () {
-            Route::apiResource('role', RoleController::class)->middleware('permission:manage roles');
-            Route::apiResource('staff', AdminController::class)->middleware('permission:manage staff');
+            // Route::apiResource('role', RoleController::class)->middleware('permission:manage roles');
+            // Route::apiResource('staff', AdminController::class)->middleware('permission:manage staff');
             Route::post('change-password', [AdminAuthController::class, 'changePassword'])->middleware('throttle:5,1');
             Route::apiResource('users', UserManagementController::class)->middleware('permission:manage users');
             Route::post('staff-passport/{id}', [StaffPassportController::class, 'update']);
             Route::get('fetch-profile', [AdminAuthController::class, 'fetchProfile']);
             Route::post('logout', [AdminAuthController::class, 'logout']);
-            Route::apiResource('loan-policies', LoanPolicyController::class)->except(['destroy']);
+            Route::apiResource('loan-policies', LoanPolicyController::class)->except(['destroy', 'store']);
             Route::post('deposit-savings', [MemberSavingController::class, 'depositSavings']);
             Route::post('deposit-contribution', [MemberContributionController::class, 'depositContribution']);
             Route::post('deposit-target-savings', [MemberTargetSavingController::class, 'depositTargetSavings']);
@@ -54,6 +57,15 @@ Route::prefix('v1')->group(function () {
             Route::post('target-savings-withdrawal-approval/{id}', [MemberTargetSavingController::class, 'approveWithdrawal']);
             Route::post('approve-loan/{id}', [LoanController::class, 'approveLoan']);
             Route::post('loan-repayment', [LoanController::class, 'loanRepayment']);
+            Route::apiResource('all-loans', LoanController::class)->only(['index', 'show']);
+            Route::apiResource('member-contributions', MemberContributionController::class)->only(['index']);
+            Route::apiResource('member-savings', MemberSavingController::class)->only(['index']);
+            Route::apiResource('member-target-savings', MemberTargetSavingController::class)->only(['index']);
+            Route::patch('update-contribution-amount', [MemberContributionController::class, 'updateContributionAmount']);
+            Route::patch('update-savings-amount', [MemberSavingController::class, 'updateSavingsAmount']);
+            Route::apiResource('withdrawal-requests', WithdrawalRequestController::class)->only(['index', 'show']);
+            Route::apiResource('report', ReportController::class)->only(['index']);
+            Route::apiResource('loan-repayment-schedule', LoanRepaymentScheduleController::class)->only(['index']);
 
             Route::get('activity-logs', [ActivityLogController::class, 'index']);
             Route::get('activity-logs/search', [ActivityLogController::class, 'search']);
@@ -63,8 +75,9 @@ Route::prefix('v1')->group(function () {
             Route::post('activity-logs/mark-all-read', [ActivityLogController::class, 'markAllAsRead']);
             Route::get('activity-logs/{id}/read-by', [ActivityLogController::class, 'readBy']);
         });
-        // Route::apiResource('role', RoleController::class);
-        // Route::apiResource('staff', AdminController::class);
+        Route::post('finish-change-password', [AdminAuthController::class, 'finishChangePassword'])->middleware('throttle:5,1');
+        Route::apiResource('role', RoleController::class);
+        Route::apiResource('staff', AdminController::class);
     });
 
     Route::prefix('user')->group(function () {
@@ -84,8 +97,15 @@ Route::prefix('v1')->group(function () {
             Route::post('user-passport/{id}', [UserPassportController::class, 'update']);
             Route::post('withdraw-contribution', [MemberContributionController::class, 'withdrawContribution']);
             Route::post('withdraw-savings', [MemberSavingController::class, 'withdrawSavings']);
+            Route::post('withdraw-locked-savings', [MemberSavingController::class, 'withdrawLockedBalance']);
             Route::post('withdraw-target-savings', [MemberTargetSavingController::class, 'withdrawSavings']);
             Route::post('apply-loan', [LoanController::class, 'applyLoan']);
+            Route::apiResource('member-contributions', MemberContributionController::class)->only(['index']);
+            Route::apiResource('member-savings', MemberSavingController::class)->only(['index']);
+            Route::apiResource('member-target-savings', MemberTargetSavingController::class)->only(['index']);
+            Route::apiResource('report', ReportController::class)->only(['index']);
+            Route::apiResource('loan-repayment-schedule', LoanRepaymentScheduleController::class)->only(['index']);
+
         });
         Route::apiResource('signup', UserManagementController::class)->only('store');
     });
