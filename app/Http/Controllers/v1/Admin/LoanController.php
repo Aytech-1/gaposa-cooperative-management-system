@@ -7,7 +7,6 @@ use App\Http\Resources\admin\GuarantorResource;
 use App\Http\Resources\Admin\LoanResource;
 use App\Models\Admin\Guarantor;
 use App\Models\Admin\Loan;
-use App\Services\Cache\ClearCacheService;
 use App\Services\LoanService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -28,7 +27,7 @@ class LoanController extends Controller
                 function () use ($cursor) {
                     return Loan::with([
                         'status:status_id,status_name',
-                        'user:user_id,title_id,first_name,middle_name,last_name',
+                        'user:user_id,title_id,first_name,middle_name,last_name,passport',
                         'user.title:title_id,title_name'
                     ])->cursorPaginate(30, ['*'], 'cursor', $cursor);
                 }
@@ -134,7 +133,7 @@ class LoanController extends Controller
                     $request->input('statusId'),
                     $request->input('reason')
                 );
-
+                Cache::tags('loan_list')->flush();
                 return response()->json([
                     'success' => true,
                     'message' => 'Loan application processed successfully'

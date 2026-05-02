@@ -18,6 +18,7 @@ class GuarantorResource extends JsonResource
             'address' => $this->address,
             'relationship' => $this->relationship_to_borrower,
             'guaranteedAmount' => $this->guaranteed_amount,
+            'identificationNumber' => $this->id_number,
             'title' => [
                 'titleId' => $this->title_id ?? null,
                 'titleName' => $this->title->title_name ?? null,
